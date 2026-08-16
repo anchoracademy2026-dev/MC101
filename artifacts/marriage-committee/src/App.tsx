@@ -8,7 +8,7 @@ import { Router as WouterRouter } from 'wouter';
 
 const queryClient = new QueryClient();
 
-type View = 'overview' | 'registry' | 'inbox' | 'documents';
+type View = 'overview' | 'registry' | 'inbox' | 'documents' | 'profile';
 type Stage = 'Intake' | 'Pastoral review' | 'Medical review' | 'Committee review' | 'Approved';
 
 type Member = {
@@ -214,6 +214,13 @@ function AppShell() {
     setSelectedCandidate(null);
   };
 
+  const openCandidate = (candidate: Candidate) => {
+    setSearch('');
+    setSelectedCandidate(candidate);
+    setView('profile');
+    setSidebarOpen(false);
+  };
+
   const createCase = () => {
     if (!newCase.names.trim() || !newCase.city.trim()) {
       showToast('Add the couple’s names and city to start the case.');
@@ -299,14 +306,14 @@ function AppShell() {
         </header>
 
         <main className="mx-auto max-w-[1440px] px-5 py-7 sm:px-8 sm:py-9">
-          {view === 'overview' && <Overview onNavigate={go} onNewCase={() => setShowNewCase(true)} onSelect={setSelectedCandidate} candidates={candidates} />}
-          {view === 'registry' && <Registry search={search} setSearch={setSearch} registryStage={registryStage} setRegistryStage={setRegistryStage} regionFilter={regionFilter} setRegionFilter={setRegionFilter} candidates={filteredCandidates} total={candidates.length} onSelect={setSelectedCandidate} onNewCase={() => setShowNewCase(true)} />}
+          {view === 'overview' && <Overview onNavigate={go} onNewCase={() => setShowNewCase(true)} onSelect={openCandidate} candidates={candidates} />}
+          {view === 'registry' && <Registry search={search} setSearch={setSearch} registryStage={registryStage} setRegistryStage={setRegistryStage} regionFilter={regionFilter} setRegionFilter={setRegionFilter} candidates={filteredCandidates} total={candidates.length} onSelect={openCandidate} onNewCase={() => setShowNewCase(true)} />}
           {view === 'inbox' && <InboxView notices={notices} onRead={markRead} onCompose={() => setShowCompose(true)} />}
           {view === 'documents' && <Documents onUpload={() => setShowUpload(true)} onToast={showToast} />}
+          {view === 'profile' && selectedCandidate && <CandidateProfilePage candidate={selectedCandidate} onClose={() => { setSelectedCandidate(null); setView('registry'); }} onToast={showToast} />}
         </main>
       </div>
 
-      {selectedCandidate && <CandidateDrawer candidate={selectedCandidate} onClose={() => setSelectedCandidate(null)} onToast={showToast} />}
       {showNewCase && <NewCaseModal form={newCase} setForm={setNewCase} onClose={() => setShowNewCase(false)} onCreate={createCase} />}
       {showUpload && <UploadModal onClose={() => setShowUpload(false)} onUpload={() => { setShowUpload(false); showToast('Document added to the local demo workspace.'); }} />}
       {showCompose && <ComposeModal onClose={() => setShowCompose(false)} onSend={() => { setShowCompose(false); showToast('Message sent to the selected pastor.'); }} />}
@@ -379,7 +386,7 @@ function Documents({ onUpload, onToast }: { onUpload: () => void; onToast: (mess
   </div>;
 }
 
-function CandidateDrawer({ candidate, onClose, onToast }: { candidate: Candidate; onClose: () => void; onToast: (message: string) => void }) {
+function CandidateProfilePage({ candidate, onClose, onToast }: { candidate: Candidate; onClose: () => void; onToast: (message: string) => void }) {
   const steps = ['Intake', 'Pastoral review', 'Medical review', 'Committee review', 'Approved'];
   const activeIndex = steps.indexOf(candidate.stage);
   const recordStatus = (status: RecordItem['status']) => status === 'Verified' || status === 'Complete'
@@ -387,14 +394,12 @@ function CandidateDrawer({ candidate, onClose, onToast }: { candidate: Candidate
     : status === 'Review needed'
       ? 'bg-[#f3ead5] text-[#956b31]'
       : 'bg-[#eee9f1] text-[#765579]';
-  return <>
-    <button className="fixed inset-0 z-50 bg-[#252b4a]/35 backdrop-blur-[2px]" onClick={onClose} aria-label="Close person detail" data-testid="button-close-candidate-backdrop" />
-    <aside className="fixed inset-y-0 right-0 z-[55] flex w-full max-w-[620px] flex-col overflow-y-auto bg-[#faf8f3] shadow-2xl animate-soft-in">
-      <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[#e1dbd1] bg-[#faf8f3]/95 px-5 py-4 backdrop-blur sm:px-7">
+  return <div className="animate-soft-in">
+    <div className="flex items-center justify-between border-b border-[#e1dbd1] pb-4">
         <button onClick={onClose} className="flex items-center gap-2 text-xs font-semibold text-[#777167] hover:text-[#252b4a]" data-testid="button-close-candidate"><PanelLeftClose size={17} />Back to registry</button>
         <button onClick={() => onToast('More case actions will be available to the church registry team.')} className="rounded-lg p-2 text-[#777167] hover:bg-[#eee9df]" aria-label="More case actions" data-testid="button-candidate-more"><MoreHorizontal size={18} /></button>
-      </div>
-      <div className="px-5 py-7 sm:px-7">
+    </div>
+    <div className="mx-auto max-w-[980px] px-0 py-7">
         <div className="flex items-start gap-4">
           <Avatar initials={candidate.initials} size="lg" tone="copper" />
           <div className="min-w-0 flex-1">
@@ -453,9 +458,8 @@ function CandidateDrawer({ candidate, onClose, onToast }: { candidate: Candidate
           <button onClick={() => onToast('A review reminder has been prepared for the pastoral lead.')} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#252b4a] px-4 py-3 text-xs font-semibold text-[#f8f5eb] hover:bg-[#30385e]" data-testid="button-send-reminder"><Send size={14} />Send reminder</button>
           <button onClick={() => onToast('Case forms are available in the shared library.')} className="flex items-center justify-center gap-2 rounded-xl border border-[#d8d0c4] px-4 py-3 text-xs font-semibold text-[#57534c] hover:bg-[#eee9df]" data-testid="button-view-case-forms"><FileText size={14} />Forms</button>
         </div>
-      </div>
-    </aside>
-  </>;
+    </div>
+  </div>;
 }
 
 function ModalFrame({ title, eyebrow, onClose, children }: { title: string; eyebrow: string; onClose: () => void; children: ReactNode }) {
