@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Marriage Committee Platform"
+description = "A statewide marriage committee operations platform that helps church regions manage member profiles, marriage cases, documents, medical results, pastor notifications, and process progress in one secure place."
+version = "1.0.0"
+id = "artifacts/marriage-committee"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 19977
+
+[services.development]
+run = "pnpm --filter @workspace/marriage-committee run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/marriage-committee", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/marriage-committee/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19977"
+BASE_PATH = "/"
