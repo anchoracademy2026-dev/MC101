@@ -1,0 +1,1 @@
+- [Vercel static build](vercel-static-build.md) — Vite config must tolerate missing Replit-only PORT and BASE_PATH variables when Vercel builds the SPA.
